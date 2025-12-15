@@ -1,0 +1,52 @@
+.gift-box {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 24px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+
+  background-image: url('/hopqua.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.gift-big {
+  transform: scale(1.06);
+}
+
+.gift-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.4), transparent),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.7));
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+.gift-box:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7);
+}
+
+/* tint màu khác nhau cho 3 hộp */
+.gift-red {
+  filter: hue-rotate(-10deg) saturate(1.2);
+}
+.gift-green {
+  filter: hue-rotate(90deg) saturate(1.2);
+}
+.gift-blue {
+  filter: hue-rotate(200deg) saturate(1.2);
+}
+
+@media (max-width: 600px) {
+  .gift-box {
+    width: 130px;
+    height: 130px;
+  }
+}
