@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import TreeOverlay from "../components/TreeOverlay";
 
-const API_BASE = "http://localhost:5000";
+/**
+ * ✅ API base: dùng cho cả local + deploy
+ * - Local: VITE_API_BASE=http://localhost:5000 (trong client/.env)
+ * - Deploy: VITE_API_BASE=https://<your-render>.onrender.com (trong Vercel env)
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
 /** Modal tự viết để khỏi phụ thuộc CardModal (tránh lỗi không hiện) */
 function SimpleModal({ open, title, children, onClose }) {
@@ -61,9 +66,7 @@ function SimpleModal({ open, title, children, onClose }) {
           ✕
         </button>
 
-        <div style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>
-          {title}
-        </div>
+        <div style={{ fontSize: 32, fontWeight: 900, marginBottom: 8 }}>{title}</div>
 
         <div style={{ whiteSpace: "pre-line", lineHeight: 1.7, color: "#eaeaea" }}>
           {children}
@@ -90,15 +93,27 @@ export default function HomePage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/settings`);
+        const res = await fetch(`${API_BASE}/api/settings`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(`Fetch settings failed: ${res.status} ${res.statusText} ${text}`);
+        }
+
         const data = await res.json();
         setSettings(data);
       } catch (e) {
         console.error("Fetch settings error:", e);
+        // fallback để UI không bị trống
+        setSettings({ crushName: "Lcuyen" });
       } finally {
         setLoading(false);
       }
     };
+
     fetchSettings();
   }, []);
 
@@ -145,7 +160,6 @@ export default function HomePage() {
       await a.play();
       setAudioReady(true);
     } catch (e) {
-      // vẫn bị chặn thì thôi
       setAudioReady(false);
     }
   };
@@ -169,6 +183,7 @@ export default function HomePage() {
         setModalOpen(false);
         setShowTree(true);
 
+        // ✅ thời gian cây thông hiện: chỉnh số ms ở đây
         window.setTimeout(() => {
           setShowTree(false);
           setModalTitle(`Gửi ${crushName} 💌`);
@@ -223,7 +238,12 @@ export default function HomePage() {
 
         <div className="countLine">
           Em đã mở {openCount}/3 lần rồi đó 😆
-          {!audioReady && <span style={{ opacity: 0.9 }}> &nbsp;•&nbsp; (nhạc sẽ tự bật khi em bấm hộp quà)</span>}
+          {!audioReady && (
+            <span style={{ opacity: 0.9 }}>
+              {" "}
+              &nbsp;•&nbsp; (nhạc sẽ tự bật khi em bấm hộp quà)
+            </span>
+          )}
         </div>
       </div>
 
