@@ -6,6 +6,9 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// ========================
+// Middleware
+// ========================
 app.use(
   cors({
     origin: process.env.CLIENT_URL || '*'
@@ -13,16 +16,32 @@ app.use(
 );
 app.use(express.json());
 
-// routes chính
+// ========================
+// ✅ ROOT ROUTE (BẮT BUỘC CHO RENDER)
+// ========================
+app.get('/', (req, res) => {
+  res.status(200).send('🎄 Christmas Gift Server is running!');
+});
+
+// ========================
+// API ROUTES
+// ========================
 app.use('/api/settings', settingsRoutes);
 app.use('/api/replies', replyRoutes);
 
-// health check
+// ========================
+// Health check (giữ nguyên)
+// ========================
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString()
+  });
 });
 
-// middleware xử lý lỗi (đặt cuối)
+// ========================
+// Error handler (luôn để cuối)
+// ========================
 app.use(errorHandler);
 
 module.exports = app;
