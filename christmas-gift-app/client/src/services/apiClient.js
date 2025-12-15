@@ -1,45 +1,54 @@
 /**
  * API base:
- * - Local: VITE_API_BASE=http://localhost:5000
+ * - Local:  VITE_API_BASE=http://localhost:5000
  * - Deploy: VITE_API_BASE=https://<render-backend>.onrender.com
  */
 const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
-/**
- * Lấy settings
- */
-export async function getSettings() {
-  const res = await fetch(`${API_BASE}/api/settings`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+// Timeout để tránh treo mãi (Render sleep lần đầu)
+const DEFAULT_TIMEOUT_MS = 20000;
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch settings: ${res.status} ${text}`);
+async function request(path, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+      // nếu sau này bạn cần cookie/session thì để sẵn:
+      credentials: "omit",
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+    }
+
+    // API bạn trả JSON nên parse luôn
+    return await res.json();
+  } catch (err) {
+    // timeout
+    if (err?.name === "AbortError") {
+      throw new Error("Request timeout. Backend có thể đang sleep, thử F5 lại nhé.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return res.json();
 }
 
-/**
- * Gửi reply
- */
-export async function sendReply(message) {
-  const res = await fetch(`${API_BASE}/api/replies`, {
+export function getSettings() {
+  return request("/api/settings", { method: "GET" });
+}
+
+export function sendReply(message) {
+  return request("/api/replies", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ message }),
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to send reply: ${res.status} ${text}`);
-  }
-
-  return res.json();
 }

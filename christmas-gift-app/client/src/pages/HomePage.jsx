@@ -1,12 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import TreeOverlay from "../components/TreeOverlay";
-
-/**
- * ✅ API base: dùng cho cả local + deploy
- * - Local: VITE_API_BASE=http://localhost:5000 (trong client/.env)
- * - Deploy: VITE_API_BASE=https://<your-render>.onrender.com (trong Vercel env)
- */
-const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:5000").replace(/\/$/, "");
+import { getSettings } from "../services/apiClient";
 
 /** Modal tự viết để khỏi phụ thuộc CardModal (tránh lỗi không hiện) */
 function SimpleModal({ open, title, children, onClose }) {
@@ -90,31 +84,27 @@ export default function HomePage() {
   const audioRef = useRef(null);
   const [audioReady, setAudioReady] = useState(false); // true khi đã play được
 
+  // ✅ Load settings từ backend (Render)
   useEffect(() => {
+    let mounted = true;
+
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/settings`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(`Fetch settings failed: ${res.status} ${res.statusText} ${text}`);
-        }
-
-        const data = await res.json();
-        setSettings(data);
+        const data = await getSettings();
+        if (mounted) setSettings(data);
       } catch (e) {
         console.error("Fetch settings error:", e);
         // fallback để UI không bị trống
-        setSettings({ crushName: "Lcuyen" });
+        if (mounted) setSettings({ crushName: "Lcuyen" });
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     fetchSettings();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const crushName = settings?.crushName || "Lcuyen";
@@ -142,15 +132,14 @@ export default function HomePage() {
         a.volume = 0.65;
         await a.play();
         setAudioReady(true);
-      } catch (e) {
-        // bị chặn là bình thường
+      } catch {
         setAudioReady(false);
       }
     };
     tryAutoPlay();
   }, []);
 
-  // bật nhạc “cưỡng bức” khi user click lần đầu (vì lúc đó browser cho phép)
+  // bật nhạc khi user click lần đầu
   const ensureMusic = async () => {
     try {
       const a = audioRef.current;
@@ -159,17 +148,16 @@ export default function HomePage() {
       a.volume = 0.65;
       await a.play();
       setAudioReady(true);
-    } catch (e) {
+    } catch {
       setAudioReady(false);
     }
   };
 
   const openGift = async () => {
-    // ✅ đảm bảo nhạc sẽ chạy sau click (nếu autoplay bị chặn)
     await ensureMusic();
 
     setOpenCount((prev) => {
-      if (prev >= 3) return prev; // khóa sau khi đủ 3
+      if (prev >= 3) return prev;
 
       const next = prev + 1;
 
@@ -247,7 +235,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Overlay cây thông chỉ hiện ở lần 3 */}
       {showTree && <TreeOverlay />}
 
       <SimpleModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)}>
@@ -267,7 +254,6 @@ export default function HomePage() {
           background-color:#050814;
         }
 
-        /* lớp phủ tối nhẹ, KHÔNG chặn click */
         .homeRoot::before{
           content:"";
           position:absolute; inset:0;
